@@ -1,0 +1,40 @@
+name: 'GitHub Actions - Prod Stack'
+
+on:
+  push:
+    branches:
+      - 'master'
+
+env:
+    # global
+    env: 'prod'
+    aws_region: 'ap-southeast-2'
+
+jobs:
+  register_workflow:
+    runs-on: ubuntu-latest
+    name: Register Workflow
+    steps:
+      - uses: actions/checkout@v1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.aws_region }}
+      - name: Get Commit hash and Branch Name
+        id: action_vars
+        shell: bash
+        run: |
+          echo "::set-output name=commit_sha::$(git rev-parse --short HEAD)"
+          echo $(git rev-parse --short HEAD)
+      - name: Register Workflow with Prefect Cloud
+        id: register_workflow
+        uses: maikelpenz/dataflow-automation-infra/prefect/prefect_register@v1
+        with:
+          env: prod
+          git_url: 'https://github.com/maikelpenz/dataflow-sample-workflow.git'
+          branch_name: master
+          commit_sha: ${{ steps.action_vars.outputs.commit_sha }}
+          workflow_path: 'workflow'
+          prefect_register_token_secret_name: 'prefectregistertoken'
